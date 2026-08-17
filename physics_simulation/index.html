@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>质点动力学仿真程序</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-atom"></i> 质点动力学仿真程序</h1>
+            <p class="subtitle">模拟重力、弹力、摩擦力、能量守恒和动量守恒等基本物理规律</p>
+        </header>
+
+        <div class="main-content">
+            <div class="left-panel">
+                <div class="canvas-container">
+                    <canvas id="simulationCanvas" width="800" height="600"></canvas>
+                    <div class="canvas-controls">
+                        <button id="playPauseBtn" class="btn btn-primary">
+                            <i class="fas fa-play"></i> 开始
+                        </button>
+                        <button id="resetBtn" class="btn btn-secondary">
+                            <i class="fas fa-redo"></i> 重置
+                        </button>
+                        <button id="clearBtn" class="btn btn-danger">
+                            <i class="fas fa-trash"></i> 清空
+                        </button>
+                        <div class="simulation-info">
+                            <span>时间: <span id="timeDisplay">0.00</span> s</span>
+                            <span>速度: <span id="speedDisplay">0.00</span> m/s</span>
+                            <span>能量: <span id="energyDisplay">0.00</span> J</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="right-panel">
+                <div class="control-section">
+                    <h2><i class="fas fa-sliders-h"></i> 仿真控制</h2>
+                    
+                    <div class="control-group">
+                        <label for="gravitySlider">重力加速度 (m/s²): <span id="gravityValue">9.8</span></label>
+                        <input type="range" id="gravitySlider" min="0" max="20" step="0.1" value="9.8">
+                    </div>
+                    
+                    <div class="control-group">
+                        <label for="frictionSlider">动摩擦因数: <span id="frictionValue">0.2</span></label>
+                        <input type="range" id="frictionSlider" min="0" max="1" step="0.01" value="0.2">
+                    </div>
+                    
+                    <div class="control-group">
+                        <label for="timeScaleSlider">时间缩放: <span id="timeScaleValue">1.0</span>x</label>
+                        <input type="range" id="timeScaleSlider" min="0.1" max="5" step="0.1" value="1.0">
+                    </div>
+                </div>
+
+                <div class="control-section">
+                    <h2><i class="fas fa-cube"></i> 添加物体</h2>
+                    
+                    <div class="button-group">
+                        <button id="addBlockBtn" class="btn btn-add">
+                            <i class="fas fa-square"></i> 添加滑块
+                        </button>
+                        <button id="addBoardBtn" class="btn btn-add">
+                            <i class="fas fa-rectangle-wide"></i> 添加长木板
+                        </button>
+                        <button id="addSlopeBtn" class="btn btn-add">
+                            <i class="fas fa-arrow-up-right-dots"></i> 添加斜面
+                        </button>
+                        <button id="addFloorBtn" class="btn btn-add">
+                            <i class="fas fa-border-all"></i> 添加水平面
+                        </button>
+                    </div>
+                    
+                    <div class="control-group">
+                        <label for="massInput">滑块质量 (kg):</label>
+                        <input type="number" id="massInput" min="0.1" max="100" step="0.1" value="1.0">
+                    </div>
+                    
+                    <div class="control-group">
+                        <label for="initialVelocityInput">初速度 (m/s):</label>
+                        <div class="vector-input">
+                            <input type="number" id="vxInput" placeholder="水平" step="0.1" value="0">
+                            <input type="number" id="vyInput" placeholder="竖直" step="0.1" value="0">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="control-section">
+                    <h2><i class="fas fa-bolt"></i> 施加恒力</h2>
+                    
+                    <div class="control-group">
+                        <label for="forceXInput">水平力 (N):</label>
+                        <input type="number" id="forceXInput" step="0.1" value="0">
+                    </div>
+                    
+                    <div class="control-group">
+                        <label for="forceYInput">竖直力 (N):</label>
+                        <input type="number" id="forceYInput" step="0.1" value="0">
+                    </div>
+                    
+                    <button id="applyForceBtn" class="btn btn-primary">
+                        <i class="fas fa-hand-paper"></i> 施加力
+                    </button>
+                    <button id="clearForceBtn" class="btn btn-secondary">
+                        <i class="fas fa-times"></i> 清除力
+                    </button>
+                </div>
+
+                <div class="control-section">
+                    <h2><i class="fas fa-chart-line"></i> 物理信息</h2>
+                    
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <span class="info-label">动量 (kg·m/s):</span>
+                            <span class="info-value" id="momentumDisplay">0.00</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">动能 (J):</span>
+                            <span class="info-value" id="kineticEnergyDisplay">0.00</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">势能 (J):</span>
+                            <span class="info-value" id="potentialEnergyDisplay">0.00</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">总能量 (J):</span>
+                            <span class="info-value" id="totalEnergyDisplay">0.00</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">摩擦损耗 (J):</span>
+                            <span class="info-value" id="frictionLossDisplay">0.00</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="control-section">
+                    <h2><i class="fas fa-info-circle"></i> 使用说明</h2>
+                    <ul class="instructions">
+                        <li>点击"添加滑块"在画布上放置滑块</li>
+                        <li>添加长木板或斜面作为支撑面</li>
+                        <li>调节摩擦因数滑块改变表面粗糙度</li>
+                        <li>设置初速度和施加恒力改变物体运动</li>
+                        <li>观察能量和动量守恒情况</li>
+                        <li>点击开始/暂停控制仿真运行</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>质点动力学仿真程序 &copy; 2026 | 基于HTML5 Canvas和JavaScript构建</p>
+        </footer>
+    </div>
+
+    <script src="physics.js"></script>
+    <script src="simulation.js"></script>
+</body>
+</html>
