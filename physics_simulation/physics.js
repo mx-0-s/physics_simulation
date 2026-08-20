@@ -90,7 +90,8 @@ class PhysicsObject {
         this.forces = new Vector2(0, 0);
     }
     
-    update(dt, gravity, frictionCoefficient) {
+    // 更新签名：增加 groundLevel 以便计算势能时不依赖硬编码
+    update(dt, gravity, frictionCoefficient, groundLevel) {
         if (this.static) return;
         
         // 应用重力
@@ -110,7 +111,7 @@ class PhysicsObject {
         this.position = this.position.add(this.velocity.multiply(dt));
         
         // 计算能量
-        this.calculateEnergy(gravity);
+        this.calculateEnergy(gravity, groundLevel);
         
         // 清除力用于下一帧
         this.clearForces();
@@ -262,14 +263,15 @@ class PhysicsObject {
         return false; // 默认返回false，实际检测在PhysicsEngine中处理
     }
     
-    calculateEnergy(gravity) {
+    // 计算能量：接收 groundLevel 以便与画布/世界高度解耦
+    calculateEnergy(gravity, groundLevel) {
         // 动能: 1/2 * m * v^2
         const speed = this.velocity.magnitude();
         this.kineticEnergy = 0.5 * this.mass * speed * speed;
         
         // 势能: m * g * h (以画布底部为参考)
-        const groundLevel = 600; // 画布高度
-        const height = groundLevel - (this.position.y + this.height);
+        const ground = (typeof groundLevel === 'number') ? groundLevel : 600;
+        const height = ground - (this.position.y + this.height);
         this.potentialEnergy = this.mass * gravity * height;
     }
     
@@ -406,7 +408,7 @@ class PhysicsObject {
         const slopeRightX = slopeObj.position.x + slopeObj.width;
         const slopeBottomY = slopeObj.position.y + slopeObj.height;
         
-        // 判断物体在斜面的哪一侧
+        // 判断���体在斜面的哪一侧
         const objCenterX = dynamicObj.position.x + dynamicObj.width/2;
         const objCenterY = dynamicObj.position.y + dynamicObj.height/2;
         
@@ -428,7 +430,7 @@ class PhysicsObject {
 }
 
 class PhysicsEngine {
-    constructor() {
+    constructor(options = {}) {
         this.objects = [];
         this.gravity = 9.8;
         this.frictionCoefficient = 0.2;
@@ -436,6 +438,11 @@ class PhysicsEngine {
         this.isRunning = false;
         this.currentTime = 0;
         this.selectedObject = null;
+        
+        // 注入的画布/世界尺寸（默认保留原始硬编码值以向后兼容）
+        this.canvasWidth = options.canvasWidth || 800;
+        this.canvasHeight = options.canvasHeight || 600;
+        this.groundLevel = (typeof options.groundLevel === 'number') ? options.groundLevel : this.canvasHeight;
         
         // 能量跟踪
         this.totalEnergy = 0;
@@ -447,7 +454,8 @@ class PhysicsEngine {
     }
     
     createDefaultFloor() {
-        const floor = new PhysicsObject('floor', new Vector2(0, 580), 800, 20, {
+        const floorHeight = 20;
+        const floor = new PhysicsObject('floor', new Vector2(0, this.groundLevel - floorHeight), this.canvasWidth, floorHeight, {
             static: true,
             frictionCoefficient: 0.2
         });
@@ -503,8 +511,8 @@ class PhysicsEngine {
                 this.preventPenetration(obj, supportingSurface);
             }
             
-            // 更新物体状态
-            obj.update(scaledDt, this.gravity, this.frictionCoefficient);
+            // 更新物体状态（传入 groundLevel）
+            obj.update(scaledDt, this.gravity, this.frictionCoefficient, this.groundLevel);
             
             // 累计总能量和动量
             this.totalEnergy += obj.kineticEnergy + obj.potentialEnergy;
@@ -576,8 +584,8 @@ class PhysicsEngine {
     }
     
     handleBoundaries() {
-        const canvasWidth = 800;
-        const canvasHeight = 600;
+        const canvasWidth = this.canvasWidth;
+        const canvasHeight = this.canvasHeight;
         
         for (const obj of this.objects) {
             if (obj.static) continue;
